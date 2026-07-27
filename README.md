@@ -12,6 +12,7 @@ A varredura cobre um raio de aproximadamente 100 km, incluindo o lado sul-mato-g
 config/perfil.json           perfil do candidato, municípios do raio e regras de elegibilidade
 scripts/pci.py               cliente do servidor MCP público da PCI Concursos
 scripts/buscar_concursos.py  varre os municípios e monta o rascunho do relatório
+scripts/diarios.py           busca atos de concurso nos diários oficiais
 scripts/enviar_email.py      envia um relatório por SMTP
 scripts/rodar_diario.py      rotina completa: varre, grava e envia
 relatorios/AAAA-MM-DD.md     relatório de cada dia (é também o corpo do e-mail)
@@ -26,7 +27,10 @@ Tudo roda com a biblioteca padrão do Python 3.10+ — não há dependências pa
 python3 scripts/rodar_diario.py --diagnostico  # o canal de e-mail está configurado?
 python3 scripts/rodar_diario.py --dry-run      # rotina completa, sem enviar de verdade
 python3 scripts/rodar_diario.py                # rotina completa
+python3 scripts/rodar_diario.py --sem-diarios  # pula os diários (varredura rápida)
 ```
+
+A rotina completa leva cerca de 40 segundos: 15 na PCI e 25 nos diários.
 
 Os passos avulsos continuam disponíveis:
 
@@ -34,6 +38,8 @@ Os passos avulsos continuam disponíveis:
 python3 scripts/buscar_concursos.py            # imprime o rascunho do dia
 python3 scripts/buscar_concursos.py --salvar   # grava em relatorios/AAAA-MM-DD.md
 python3 scripts/buscar_concursos.py --json     # resultado bruto, para depuração
+python3 scripts/diarios.py --dias 30           # só os diários, janela de 30 dias
+python3 scripts/diarios.py --tudo              # inclui atos de andamento sem corte
 python3 scripts/enviar_email.py relatorios/2026-07-27.md --dry-run
 ```
 
@@ -43,20 +49,46 @@ ser entregue por outro caminho, em vez de mascarar a falha de envio.
 
 ## O que a varredura automática cobre (e o que não cobre)
 
+### Portais de concurso
+
 `buscar_concursos.py` consulta o conector MCP oficial da PCI Concursos
 (`https://mcp.pciconcursos.com.br/mcp`), que indexa **apenas concursos com inscrição
 aberta**. Ele não enxerga certames autorizados ou previstos, nem cobre integralmente
 editais de bancas regionais pequenas.
 
-Por isso o script produz um *rascunho*. Antes de enviar o relatório, é preciso conferir
-manualmente as fontes listadas em `config/perfil.json > fontes_extras`, entre elas o
-portal URH do Centro Paula Souza (Etecs de Ilha Solteira, Andradina, Jales e
-Santa Fé do Sul), UFMS, IFMS, os portais das prefeituras da região e os diários oficiais
-da União, de São Paulo e de Mato Grosso do Sul.
-
-A triagem de elegibilidade também é aproximada: a PCI informa a escolaridade no nível do
+A triagem de elegibilidade é aproximada: a PCI informa a escolaridade no nível do
 certame, nunca por cargo, então um cargo marcado com "aderência alta" ainda precisa ser
 confirmado no edital.
+
+### Diários oficiais
+
+`diarios.py` cobre duas fontes com API utilizável sem autenticação:
+
+| Diário | Como | Situação |
+| --- | --- | --- |
+| **DOU** (União) | busca do `in.gov.br`, lendo o JSON embutido na página | automatizado |
+| **DO municipais** | API do Querido Diário (Open Knowledge Brasil) | automatizado, 11 dos 43 municípios |
+| **DOE-SP** | — | manual: a API devolve lista vazia para consulta anônima |
+| **DOE-MS** | — | manual: app Next.js sem endpoint público estável |
+| **DO dos municípios de MS** (Assomasul) | — | manual: busca exige sessão autenticada |
+
+Os três últimos aparecem no relatório como uma lista "Conferir manualmente", com a URL e
+o período sugerido já montados.
+
+Duas limitações valem ser conhecidas. A cobertura municipal do Querido Diário é parcial —
+Andradina, Guaraçaí, Lavínia, Valparaíso, General Salgado, Dirce Reis e Inocência têm
+busca full-text; Ilha Solteira, Três Lagoas, Selvíria, Santa Fé do Sul e Jales ainda não
+são coletados (veja `qd_nivel` em `config/perfil.json`). E a classificação entre
+"abertura" e "andamento" roda sobre o trecho que a busca devolve, não sobre o documento
+inteiro, então um edital de abertura pode cair em "andamento" quando o recorte pega o
+sumário do diário. Por isso os dois grupos vão no relatório, com link para o PDF.
+
+### Conferência manual
+
+O relatório é um *rascunho*. Antes de enviar, vale conferir as fontes listadas em
+`config/perfil.json > fontes_extras`, entre elas o portal URH do Centro Paula Souza
+(Etecs de Ilha Solteira, Andradina, Jales e Santa Fé do Sul), UFMS, IFMS e os portais
+das prefeituras da região.
 
 ## Envio do e-mail
 
