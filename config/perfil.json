@@ -408,6 +408,20 @@
       "agrônomo"
     ]
   },
+  "busca_por_cargo": {
+    "comentario": "A varredura por cidade só enxerga certames que a PCI indexa como municipais, então perde concursos estaduais, federais e de universidades cuja lotação não é um dos 43 municípios. Esta segunda passada busca pelo cargo/formação e reporta os achados à parte, marcados como fora do raio.",
+    "ufs": ["SP", "MS"],
+    "termos": [
+      "Ciencias Sociais",
+      "Sociologia",
+      "Antropologia",
+      "Ciencia Politica",
+      "Publicidade",
+      "Comunicacao Social",
+      "Jornalismo",
+      "Marketing"
+    ]
+  },
   "fontes_extras": [
     "https://www.pciconcursos.com.br/concursos/sudeste/",
     "https://www.pciconcursos.com.br/concursos/centrooeste/",
