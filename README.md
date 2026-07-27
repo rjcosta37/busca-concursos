@@ -13,6 +13,7 @@ config/perfil.json           perfil do candidato, municípios do raio e regras d
 scripts/pci.py               cliente do servidor MCP público da PCI Concursos
 scripts/buscar_concursos.py  varre por município e por cargo, e monta o rascunho do relatório
 scripts/diarios.py           busca atos de concurso nos diários oficiais
+scripts/fontes_extras.py     consulta portais e bancas (portal SP, Cebraspe, Folha Dirigida)
 scripts/enviar_email.py      envia um relatório por SMTP
 scripts/rodar_diario.py      rotina completa: varre, grava e envia
 relatorios/AAAA-MM-DD.md     relatório de cada dia (é também o corpo do e-mail)
@@ -28,9 +29,10 @@ python3 scripts/rodar_diario.py --diagnostico  # o canal de e-mail está configu
 python3 scripts/rodar_diario.py --dry-run      # rotina completa, sem enviar de verdade
 python3 scripts/rodar_diario.py                # rotina completa
 python3 scripts/rodar_diario.py --sem-diarios  # pula os diários (varredura rápida)
+python3 scripts/rodar_diario.py --sem-portais  # pula os portais e bancas
 ```
 
-A rotina completa leva cerca de 40 segundos: 15 na PCI e 25 nos diários.
+A rotina completa leva cerca de 40 segundos: 20 na PCI, 18 nos diários e 3 nos portais.
 
 Os passos avulsos continuam disponíveis:
 
@@ -40,6 +42,8 @@ python3 scripts/buscar_concursos.py --salvar   # grava em relatorios/AAAA-MM-DD.
 python3 scripts/buscar_concursos.py --json     # resultado bruto, para depuração
 python3 scripts/diarios.py --dias 30           # só os diários, janela de 30 dias
 python3 scripts/diarios.py --tudo              # inclui atos de andamento sem corte
+python3 scripts/fontes_extras.py               # só os portais e bancas
+python3 scripts/fontes_extras.py --fonte sp    # limita a uma fonte (pode repetir)
 python3 scripts/enviar_email.py relatorios/2026-07-27.md --dry-run
 ```
 
@@ -90,6 +94,26 @@ são coletados (veja `qd_nivel` em `config/perfil.json`). E a classificação en
 "abertura" e "andamento" roda sobre o trecho que a busca devolve, não sobre o documento
 inteiro, então um edital de abertura pode cair em "andamento" quando o recorte pega o
 sumário do diário. Por isso os dois grupos vão no relatório, com link para o PDF.
+
+### Portais e bancas
+
+`fontes_extras.py` cobre o que a PCI e os diários deixam de fora, sobretudo certames
+**autorizados e previstos**:
+
+| Fonte | Como | O que entrega |
+| --- | --- | --- |
+| **Portal de Concursos do Estado de SP** | HTML servido pelo servidor (ISO-8859-1) | inscrições abertas, **autorizados** e próximos concursos do Estado |
+| **Cebraspe** | API JSON em `apis.cebraspe.org.br`, sem autenticação | eventos agrupados por fase (novos, inscrições abertas) |
+| **Folha Dirigida** (Qconcursos) | HTML renderizado no servidor | editorias de concursos abertos, previstos, SP e MS |
+| **VUNESP** | — | manual: o site responde 403 a qualquer requisição fora do navegador |
+
+O portal do Estado de SP é o mais valioso dos quatro: é a fonte oficial e a única
+automatizável para concursos autorizados em São Paulo, já que a API do DOE-SP devolve
+lista vazia para consulta anônima. A seção de autorizados mostra apenas as autorizações
+vigentes no momento, não o histórico, então vale conferir todo dia.
+
+A página da VUNESP entra no relatório como um link para conferência, porque o site
+bloqueia `curl` e `urllib` — inclusive na raiz. Ele funciona por busca web.
 
 ### Conferência manual
 

@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 """Executa a rotina diária de ponta a ponta: varre, grava o relatório e envia.
 
-A varredura tem duas partes que se complementam: a PCI Concursos (concursos com
-inscrição aberta, já consolidados) e os diários oficiais (atos publicados antes de
-qualquer portal noticiar). O relatório junta as duas.
+A varredura tem três partes que se complementam: a PCI Concursos (certames com
+inscrição aberta, já consolidados), os diários oficiais (atos publicados antes de
+qualquer portal noticiar) e os portais e bancas (o Portal de Concursos do Estado de
+SP, o Cebraspe e a Folha Dirigida, que cobrem autorizados e previstos). O relatório
+junta as três.
 
 Uso:
     python3 scripts/rodar_diario.py              # varre, grava e tenta enviar
     python3 scripts/rodar_diario.py --dry-run    # varre, grava e só simula o envio
     python3 scripts/rodar_diario.py --diagnostico  # só checa se o canal de e-mail existe
     python3 scripts/rodar_diario.py --sem-diarios  # pula os diários (varredura rápida)
+    python3 scripts/rodar_diario.py --sem-portais  # pula os portais e bancas
 
 Códigos de saída:
     0  tudo certo (relatório gravado e e-mail enviado, ou dry-run)
@@ -32,6 +35,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import diarios  # noqa: E402
 import enviar_email  # noqa: E402
+import fontes_extras  # noqa: E402
 
 RAIZ = Path(__file__).resolve().parent.parent
 SCRIPTS = RAIZ / "scripts"
@@ -49,7 +53,7 @@ def diagnosticar() -> tuple[bool, str]:
     return True, f"canal pronto: {cfg['origem']} via {cfg['host']}:{cfg['porta']}"
 
 
-def gerar_relatorio(com_diarios: bool = True) -> Path:
+def gerar_relatorio(com_diarios: bool = True, com_portais: bool = True) -> Path:
     hoje = datetime.now(FUSO_BR)
     destino = RELATORIOS / f"{hoje:%Y-%m-%d}.md"
     subprocess.run(
@@ -63,6 +67,11 @@ def gerar_relatorio(com_diarios: bool = True) -> Path:
         res = diarios.varrer(config, JANELA_DIARIOS, {"dou", "municipais", "manuais"})
         with destino.open("a", encoding="utf-8") as f:
             f.write("\n---\n\n" + diarios.formatar(res))
+
+    if com_portais:
+        res = fontes_extras.varrer({"sp", "cebraspe", "folha", "vunesp"})
+        with destino.open("a", encoding="utf-8") as f:
+            f.write("\n---\n\n" + fontes_extras.formatar(res))
 
     return destino
 
@@ -80,6 +89,11 @@ def main() -> int:
         action="store_true",
         help="pula a varredura dos diários oficiais",
     )
+    parser.add_argument(
+        "--sem-portais",
+        action="store_true",
+        help="pula os portais e bancas (portal SP, Cebraspe, Folha Dirigida)",
+    )
     args = parser.parse_args()
 
     pronto, detalhe = diagnosticar()
@@ -88,7 +102,10 @@ def main() -> int:
         print(("[ok] " if pronto else "[falta] ") + detalhe)
         return 0 if pronto else 3
 
-    relatorio = gerar_relatorio(com_diarios=not args.sem_diarios)
+    relatorio = gerar_relatorio(
+        com_diarios=not args.sem_diarios,
+        com_portais=not args.sem_portais,
+    )
     print(f"[ok] relatório gravado em {relatorio.relative_to(RAIZ)}", flush=True)
 
     if not pronto and not args.dry_run:

@@ -422,10 +422,40 @@
       "Marketing"
     ]
   },
+  "portais_e_bancas": {
+    "comentario": "Automatizados em scripts/fontes_extras.py. O portal do Estado de SP é a única fonte automatizável de concursos AUTORIZADOS em SP, já que o DOE-SP não tem API pública utilizável. O site da VUNESP responde 403 fora do navegador, então só pode ser consultado por busca web.",
+    "portal_sp": {
+      "base": "http://www.concursopublico.sp.gov.br/PortalConcurso/noauth/PortalDeConcursos.do",
+      "acoes": ["concursoInscrAberta", "concursoAutorizado", "proximoConcurso"],
+      "encoding": "iso-8859-1"
+    },
+    "cebraspe": {
+      "api": "https://apis.cebraspe.org.br/cebraspe/eventos/tipo/concursos",
+      "fases": ["novos", "inscricoes-abertas"],
+      "site": "https://www.cebraspe.org.br/concursos/"
+    },
+    "folha_dirigida": {
+      "base": "https://folha.qconcursos.com/e",
+      "editorias": [
+        "concursos-abertos",
+        "concursos-previstos",
+        "concursos-sao-paulo-sp",
+        "concursos-mato-grosso-do-sul-ms"
+      ]
+    },
+    "vunesp": {
+      "busca": "https://www.vunesp.com.br/busca/concurso/inscricoes%20abertas",
+      "acesso": "somente por busca web; curl e urllib recebem HTTP 403"
+    }
+  },
   "fontes_extras": [
     "https://www.pciconcursos.com.br/concursos/sudeste/",
     "https://www.pciconcursos.com.br/concursos/centrooeste/",
     "https://www.pciconcursos.com.br/concursos/nacional/",
+    "http://www.concursopublico.sp.gov.br/PortalConcurso/noauth/PortalDeConcursos.do?acao=concursoAutorizado",
+    "https://folha.qconcursos.com/e/concursos-previstos",
+    "https://www.cebraspe.org.br/concursos/",
+    "https://www.vunesp.com.br/busca/concurso/inscricoes%20abertas",
     "https://urhsistemas.cps.sp.gov.br/dgsdad/SelecaoPublica/ETEC/PSS/Abertos.aspx",
     "https://urhsistemas.cps.sp.gov.br/dgsdad/SelecaoPublica/ETEC/CPD/Abertos.aspx",
     "https://urhsistemas.cps.sp.gov.br/dgsdad/SelecaoPublica/PSSAD/Abertos.aspx",
