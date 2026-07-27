@@ -11,7 +11,7 @@ A varredura cobre um raio de aproximadamente 100 km, incluindo o lado sul-mato-g
 ```
 config/perfil.json           perfil do candidato, municípios do raio e regras de elegibilidade
 scripts/pci.py               cliente do servidor MCP público da PCI Concursos
-scripts/buscar_concursos.py  varre os municípios e monta o rascunho do relatório
+scripts/buscar_concursos.py  varre por município e por cargo, e monta o rascunho do relatório
 scripts/diarios.py           busca atos de concurso nos diários oficiais
 scripts/enviar_email.py      envia um relatório por SMTP
 scripts/rodar_diario.py      rotina completa: varre, grava e envia
@@ -55,6 +55,14 @@ ser entregue por outro caminho, em vez de mascarar a falha de envio.
 (`https://mcp.pciconcursos.com.br/mcp`), que indexa **apenas concursos com inscrição
 aberta**. Ele não enxerga certames autorizados ou previstos, nem cobre integralmente
 editais de bancas regionais pequenas.
+
+A varredura tem duas passadas. A primeira busca por município, percorrendo os 43
+municípios do raio. A segunda busca pelos termos de formação do candidato
+(`config/perfil.json > busca_por_cargo`) em SP e MS, sem filtro de localidade — é ela
+que alcança concursos estaduais, federais e de universidades, cuja lotação a PCI não
+associa a nenhum dos municípios do raio. Os achados dessa segunda passada saem em uma
+seção própria do relatório, marcados como fora do raio, porque a lotação real só
+aparece no edital.
 
 A triagem de elegibilidade é aproximada: a PCI informa a escolaridade no nível do
 certame, nunca por cargo, então um cargo marcado com "aderência alta" ainda precisa ser
