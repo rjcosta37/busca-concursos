@@ -13,7 +13,9 @@ config/perfil.json           perfil do candidato, municípios do raio e regras d
 scripts/pci.py               cliente do servidor MCP público da PCI Concursos
 scripts/buscar_concursos.py  varre os municípios e monta o rascunho do relatório
 scripts/enviar_email.py      envia um relatório por SMTP
+scripts/rodar_diario.py      rotina completa: varre, grava e envia
 relatorios/AAAA-MM-DD.md     relatório de cada dia (é também o corpo do e-mail)
+.env.example                 quais secrets cadastrar
 ```
 
 Tudo roda com a biblioteca padrão do Python 3.10+ — não há dependências para instalar.
@@ -21,13 +23,23 @@ Tudo roda com a biblioteca padrão do Python 3.10+ — não há dependências pa
 ## Uso
 
 ```bash
+python3 scripts/rodar_diario.py --diagnostico  # o canal de e-mail está configurado?
+python3 scripts/rodar_diario.py --dry-run      # rotina completa, sem enviar de verdade
+python3 scripts/rodar_diario.py                # rotina completa
+```
+
+Os passos avulsos continuam disponíveis:
+
+```bash
 python3 scripts/buscar_concursos.py            # imprime o rascunho do dia
 python3 scripts/buscar_concursos.py --salvar   # grava em relatorios/AAAA-MM-DD.md
 python3 scripts/buscar_concursos.py --json     # resultado bruto, para depuração
-
 python3 scripts/enviar_email.py relatorios/2026-07-27.md --dry-run
-python3 scripts/enviar_email.py relatorios/2026-07-27.md
 ```
+
+`rodar_diario.py` sai com código 3 quando grava o relatório mas não encontra canal de
+e-mail. O código é diferente de 0 de propósito: sinaliza que o relatório existe e precisa
+ser entregue por outro caminho, em vez de mascarar a falha de envio.
 
 ## O que a varredura automática cobre (e o que não cobre)
 
@@ -48,18 +60,34 @@ confirmado no edital.
 
 ## Envio do e-mail
 
-O caminho preferencial é o conector Composio/Gmail configurado na automação. Quando ele
-não está disponível, `scripts/enviar_email.py` envia por SMTP usando estes secrets
-(Cursor Dashboard > Cloud Agents > Secrets):
+Há dois caminhos. O preferencial é o conector Composio/Gmail da automação, usado
+diretamente pelo agente. O fallback é o SMTP deste repositório, que funciona sozinho e
+não depende de nenhum conector.
 
-| Variável | Exemplo | Observação |
-| --- | --- | --- |
-| `SMTP_HOST` | `smtp.gmail.com` | obrigatória |
-| `SMTP_PORT` | `587` | 587 usa STARTTLS, 465 usa SSL; padrão 587 |
-| `SMTP_USER` | `voce@gmail.com` | obrigatória |
-| `SMTP_PASSWORD` | senha de app | obrigatória — no Gmail, use uma Senha de App |
-| `EMAIL_FROM` | `voce@gmail.com` | opcional, padrão `SMTP_USER` |
-| `EMAIL_TO` | `ricardojc011@gmail.com` | opcional, já é o padrão |
+### Cadastro do SMTP (dois secrets)
+
+Em Cursor Dashboard > Cloud Agents > Secrets, cadastre:
+
+| Variável | Exemplo |
+| --- | --- |
+| `GMAIL_USER` | `voce@gmail.com` |
+| `GMAIL_APP_PASSWORD` | Senha de App de 16 caracteres |
+
+A Senha de App é gerada em https://myaccount.google.com/apppasswords e exige verificação
+em duas etapas ativa. A senha normal da conta não funciona: o Gmail bloqueia login SMTP
+com ela. Host e porta são inferidos (`smtp.gmail.com:587`), então não precisam ser
+cadastrados.
+
+Para um remetente que não seja Gmail, use `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER` e
+`SMTP_PASSWORD`. `EMAIL_FROM` assume o usuário autenticado e `EMAIL_TO` já aponta para
+`ricardojc011@gmail.com`. Veja `.env.example`.
+
+Os secrets são injetados na VM no início de cada execução, então passam a valer a partir
+da execução seguinte ao cadastro. Para conferir se chegaram:
+
+```bash
+python3 scripts/rodar_diario.py --diagnostico
+```
 
 O assunto é extraído do primeiro cabeçalho `#` do relatório, o que mantém o formato
 `Concursos — DD/MM/AAAA — N encontrados`.
