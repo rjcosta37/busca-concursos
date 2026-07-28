@@ -69,7 +69,7 @@ def gerar_relatorio(com_diarios: bool = True, com_portais: bool = True) -> Path:
             f.write("\n---\n\n" + diarios.formatar(res))
 
     if com_portais:
-        res = fontes_extras.varrer({"sp", "cebraspe", "folha", "vunesp"})
+        res = fontes_extras.varrer({"sp", "cebraspe", "folha", "vunesp", "bancas"})
         with destino.open("a", encoding="utf-8") as f:
             f.write("\n---\n\n" + fontes_extras.formatar(res))
 

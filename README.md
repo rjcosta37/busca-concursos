@@ -13,7 +13,7 @@ config/perfil.json           perfil do candidato, municípios do raio e regras d
 scripts/pci.py               cliente do servidor MCP público da PCI Concursos
 scripts/buscar_concursos.py  varre por município e por cargo, e monta o rascunho do relatório
 scripts/diarios.py           busca atos de concurso nos diários oficiais
-scripts/fontes_extras.py     consulta portais e bancas (portal SP, Cebraspe, Folha Dirigida)
+scripts/fontes_extras.py     consulta portais e bancas (portal SP, Cebraspe, Folha Dirigida, bancas regionais)
 scripts/enviar_email.py      envia um relatório por SMTP
 scripts/rodar_diario.py      rotina completa: varre, grava e envia
 relatorios/AAAA-MM-DD.md     relatório de cada dia (é também o corpo do e-mail)
@@ -106,6 +106,8 @@ sumário do diário. Por isso os dois grupos vão no relatório, com link para o
 | **Cebraspe** | API JSON em `apis.cebraspe.org.br`, sem autenticação | eventos agrupados por fase (novos, inscrições abertas) |
 | **Folha Dirigida** (Qconcursos) | HTML renderizado no servidor | editorias de concursos abertos, previstos, SP e MS |
 | **VUNESP** | — | manual: o site responde 403 a qualquer requisição fora do navegador |
+| **Instituto DOM** | HTML na página inicial, lido por regex | certames da banca de Andradina, com o selo de inscrição aberta |
+| **Bancas regionais** | — | manual: IBAM, Instituto Avalia, CONSESP, Valespe e FCC |
 
 O portal do Estado de SP é o mais valioso dos quatro: é a fonte oficial e a única
 automatizável para concursos autorizados em São Paulo, já que a API do DOE-SP devolve
@@ -114,6 +116,25 @@ vigentes no momento, não o histórico, então vale conferir todo dia.
 
 A página da VUNESP entra no relatório como um link para conferência, porque o site
 bloqueia `curl` e `urllib` — inclusive na raiz. Ele funciona por busca web.
+
+#### Por que vigiar bancas pequenas
+
+Os editais que interessam de verdade — os de dentro do raio — não saem pelas bancas
+grandes. Cada prefeitura da região tem a sua: Instituto DOM em Andradina, IBAM em Ilha
+Solteira, Instituto Avalia em Três Lagoas, CONSESP em Santa Fé do Sul e Valespe em
+Castilho. A banca publica o edital antes de qualquer portal indexar, então ela é a
+fonte mais rápida que existe para a região.
+
+Só o Instituto DOM entrega HTML raspável, e com uma peculiaridade: a mesma URL responde
+ora em UTF-8, ora em ISO-8859-1, sempre com `Content-Type: ISO-8859-1` no cabeçalho.
+Por isso `baixar_adaptativo()` tenta UTF-8 estrito e cai para latin-1 quando falha, em
+vez de confiar no cabeçalho. Os demais respondem 403 ou montam a lista por JavaScript e
+saem no relatório como lista de conferência manual.
+
+A FCC entra nessa lista por um motivo diferente: a página inicial dela fica meses
+desatualizada (em 28/07/2026 ainda listava certames de 2025), mas é a banca dos órgãos
+ambientais paulistas, que são os que abrem vaga pedindo bacharelado em Ciências Sociais
+nominalmente — foi o caso do concurso da Fundação Florestal encerrado em 19/07/2026.
 
 ### Conferência manual
 

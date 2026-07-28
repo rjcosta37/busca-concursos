@@ -15,6 +15,12 @@ aberta e já indexados. Este módulo cobre o que falta:
 - **VUNESP** — a banca de boa parte dos certames paulistas. O site responde 403 a
   qualquer requisição fora do navegador, então aqui só devolvemos a URL para
   conferência via busca web.
+- **Bancas regionais** — quem publica os editais de dentro do raio não são as bancas
+  grandes, e sim institutos pequenos: o Instituto DOM (Andradina), o IBAM (Ilha
+  Solteira), o Instituto Avalia (Três Lagoas), a CONSESP (Santa Fé do Sul) e a
+  Valespe (Castilho). Vigiar a banca pega o edital no dia da publicação, antes de
+  qualquer portal indexar. Só o Instituto DOM entrega HTML raspável; os outros
+  respondem 403 ou montam a lista por JavaScript e ficam na conferência manual.
 
 Uso:
     python3 scripts/fontes_extras.py            # relatório em Markdown
@@ -52,6 +58,17 @@ FOLHA_EDITORIAS = (
 )
 VUNESP_BUSCA = "https://www.vunesp.com.br/busca/concurso/inscricoes%20abertas"
 
+INSTITUTO_DOM = "https://www.institutodom.com/"
+# Bancas que atendem os municípios do raio mas não podem ser raspadas: 403 no caso do
+# IBAM e da CONSESP, lista montada por JavaScript no caso do Avalia e da Valespe.
+BANCAS_MANUAIS = {
+    "IBAM (Ilha Solteira)": "https://www.ibamsp-concursos.org.br/",
+    "Instituto Avalia (Três Lagoas)": "https://www.avalia.org.br/concursos/inscricoes-abertas",
+    "CONSESP (Santa Fé do Sul)": "https://www.consesp.com.br/",
+    "Valespe (Castilho)": "https://www.valespe.com.br/",
+    "FCC (certames estaduais de SP)": "https://www.concursosfcc.com.br/",
+}
+
 UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126.0 Safari/537.36"
 TIMEOUT = 60
 
@@ -60,6 +77,22 @@ def baixar(url: str, decodificar: str = "utf-8") -> str:
     req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "*/*"})
     with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
         return resp.read().decode(decodificar, errors="replace")
+
+
+def baixar_adaptativo(url: str) -> str:
+    """Baixa decidindo o encoding pelo conteúdo, não pelo cabeçalho.
+
+    O Instituto DOM responde ora em UTF-8, ora em ISO-8859-1, para a mesma URL — e o
+    cabeçalho `Content-Type` diz ISO-8859-1 nos dois casos. Tentamos UTF-8 estrito e
+    caímos para latin-1 quando ele falha, que é o único par de encodings em jogo aqui.
+    """
+    req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "*/*"})
+    with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
+        bruto = resp.read()
+    try:
+        return bruto.decode("utf-8")
+    except UnicodeDecodeError:
+        return bruto.decode("iso-8859-1")
 
 
 def sem_tags(fragmento: str) -> str:
@@ -168,6 +201,54 @@ def folha_dirigida() -> dict[str, list[dict]]:
     return resultado
 
 
+CARTAO_DOM = re.compile(
+    r"(?P<tipo>Concurso Público|Processo Seletivo)\s*-\s*(?P<titulo>.*?)\s*"
+    r"Edital n[º°]?\s*(?P<edital>[\w./-]+)\s+"
+    r"Inscrições de\s*(?P<inicio>\d{2}/\d{2}/\d{4})\s*a\s*(?P<fim>\d{2}/\d{2}/\d{4})"
+    r"(?P<aberto>\s*Inscrições Abertas!)?",
+    flags=re.S,
+)
+
+
+def instituto_dom() -> list[dict]:
+    """Lê a página inicial do Instituto DOM, que lista os certames em cartões.
+
+    A página não tem tabela nem JSON: cada certame é um bloco de divs com o órgão, o
+    número do edital, o período de inscrição e — só quando ainda dá para se inscrever —
+    o selo "Inscrições Abertas!". Achatamos tudo em texto e lemos os cartões por
+    expressão regular, que é frágil por natureza mas sobrevive a mudança de CSS.
+    """
+    try:
+        pagina = baixar_adaptativo(INSTITUTO_DOM)
+    except (urllib.error.URLError, TimeoutError) as exc:
+        print(f"[aviso] instituto dom: {exc}", file=sys.stderr)
+        return []
+
+    texto = sem_tags(re.sub(r"<(script|style).*?</\1>", " ", pagina, flags=re.S | re.I))
+
+    certames, vistos = [], set()
+    for m in CARTAO_DOM.finditer(texto):
+        edital = m.group("edital")
+        titulo = re.sub(r"\s+", " ", m.group("titulo")).strip(" -")
+        # O cartão repete o número do edital no início do título; a parte útil é o que
+        # sobra depois dele (o órgão e, às vezes, um qualificador como "ACS" ou "Educação").
+        titulo = re.sub(rf"^{re.escape(edital)}\s*-\s*", "", titulo).strip(" -")
+        chave = (titulo, edital)
+        if chave in vistos:
+            continue
+        vistos.add(chave)
+        certames.append(
+            {
+                "tipo": m.group("tipo"),
+                "titulo": titulo,
+                "edital": edital,
+                "inscricoes": f"{m.group('inicio')} a {m.group('fim')}",
+                "aberto": bool(m.group("aberto")),
+            }
+        )
+    return certames
+
+
 def varrer(fontes: set[str]) -> dict:
     resultado = {}
     if "sp" in fontes:
@@ -178,6 +259,9 @@ def varrer(fontes: set[str]) -> dict:
         resultado["folha"] = folha_dirigida()
     if "vunesp" in fontes:
         resultado["vunesp"] = VUNESP_BUSCA
+    if "bancas" in fontes:
+        resultado["instituto_dom"] = instituto_dom()
+        resultado["bancas_manuais"] = BANCAS_MANUAIS
     return resultado
 
 
@@ -224,6 +308,34 @@ def formatar(resultado: dict) -> str:
             "",
         ]
 
+    if "instituto_dom" in resultado:
+        certames = resultado["instituto_dom"]
+        abertos = [c for c in certames if c["aberto"]]
+        linhas += [
+            "## Instituto DOM (banca de Andradina)",
+            "",
+            f"{len(abertos)} com inscrição aberta, de {len(certames)} listados.",
+            "",
+        ]
+        for c in certames:
+            selo = "**ABERTO**" if c["aberto"] else "encerrado"
+            linhas.append(
+                f"- [{selo}] {c['tipo']} {c['edital']} — {c['titulo']} "
+                f"(inscrições {c['inscricoes']})"
+            )
+        linhas.append("")
+
+    if "bancas_manuais" in resultado:
+        linhas += [
+            "## Bancas regionais — conferir à mão",
+            "",
+            "Atendem municípios do raio, mas respondem 403 ou montam a lista por JavaScript:",
+            "",
+        ]
+        for nome, url in resultado["bancas_manuais"].items():
+            linhas.append(f"- {nome}: {url}")
+        linhas.append("")
+
     return "\n".join(linhas)
 
 
@@ -233,12 +345,12 @@ def main() -> int:
     parser.add_argument(
         "--fonte",
         action="append",
-        choices=["sp", "cebraspe", "folha", "vunesp"],
+        choices=["sp", "cebraspe", "folha", "vunesp", "bancas"],
         help="limita a varredura (pode repetir)",
     )
     args = parser.parse_args()
 
-    fontes = set(args.fonte) if args.fonte else {"sp", "cebraspe", "folha", "vunesp"}
+    fontes = set(args.fonte) if args.fonte else {"sp", "cebraspe", "folha", "vunesp", "bancas"}
     resultado = varrer(fontes)
 
     if args.json:
