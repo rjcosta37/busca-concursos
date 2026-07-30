@@ -16,7 +16,7 @@ Para outro provedor, use as variáveis genéricas:
     SMTP_USER       usuário de autenticação
     SMTP_PASSWORD   senha
     EMAIL_FROM      remetente (padrão: usuário SMTP)
-    EMAIL_TO        destinatário (padrão: ricardojc011@gmail.com)
+    EMAIL_TO        destinatário (padrão: o próprio usuário autenticado)
 
 Uso:
     python3 scripts/enviar_email.py relatorios/2026-07-27.md
@@ -33,7 +33,6 @@ import sys
 from email.message import EmailMessage
 from pathlib import Path
 
-DESTINATARIO_PADRAO = "ricardojc011@gmail.com"
 GMAIL_SMTP = ("smtp.gmail.com", 587)
 
 DICA_AUTENTICACAO = """
@@ -90,11 +89,21 @@ def resolver_credenciais() -> dict:
 
 
 def assunto_do_relatorio(texto: str) -> str:
-    """Usa o primeiro cabeçalho `# ...` do Markdown como assunto."""
+    """Extrai o assunto do relatório.
+
+    Os relatórios escritos para entrega por commit começam com uma linha `Assunto: ...`,
+    justamente para que o dia em que o canal de e-mail abrir não exija reescrever nada.
+    Os mais antigos usam um cabeçalho Markdown `# ...`. Aceitamos os dois, na ordem em
+    que aparecem, e a linha `Assunto:` tem prioridade porque é a mais explícita.
+    """
+    cabecalho = None
     for linha in texto.splitlines():
-        if linha.startswith("# "):
-            return linha[2:].strip()
-    return "Concursos — relatório diário"
+        despido = linha.strip()
+        if despido.lower().startswith("assunto:"):
+            return despido.split(":", 1)[1].strip()
+        if cabecalho is None and despido.startswith("# "):
+            cabecalho = despido[2:].strip()
+    return cabecalho or "Concursos — relatório diário"
 
 
 def montar(texto: str, assunto: str, remetente: str, destinatario: str) -> EmailMessage:
@@ -133,7 +142,6 @@ def main() -> int:
 
     texto = args.relatorio.read_text(encoding="utf-8")
     assunto = args.assunto or assunto_do_relatorio(texto)
-    destinatario = args.para or os.environ.get("EMAIL_TO") or DESTINATARIO_PADRAO
 
     try:
         cfg = resolver_credenciais()
@@ -145,9 +153,12 @@ def main() -> int:
         problema = str(exc)
 
     remetente = os.environ.get("EMAIL_FROM") or (cfg["usuario"] if cfg else "")
+    # O destinatário não fica no repositório: ele é público. Sem --para nem EMAIL_TO, o
+    # relatório vai para a própria conta autenticada, que é o caso de uso normal aqui.
+    destinatario = args.para or os.environ.get("EMAIL_TO") or remetente
 
     if args.dry_run:
-        print(f"Para:     {destinatario}")
+        print(f"Para:     {destinatario or '(não configurado)'}")
         print(f"De:       {remetente or '(não configurado)'}")
         print(f"Assunto:  {assunto}")
         print(f"Corpo:    {len(texto)} caracteres")

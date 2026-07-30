@@ -164,8 +164,10 @@ com ela. Host e porta são inferidos (`smtp.gmail.com:587`), então não precisa
 cadastrados.
 
 Para um remetente que não seja Gmail, use `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER` e
-`SMTP_PASSWORD`. `EMAIL_FROM` assume o usuário autenticado e `EMAIL_TO` já aponta para
-`ricardojc011@gmail.com`. Veja `.env.example`.
+`SMTP_PASSWORD`. `EMAIL_FROM` e `EMAIL_TO` assumem o usuário autenticado, ou seja, o
+relatório vai para a própria conta que envia. Para mandar para outro endereço, cadastre
+`EMAIL_TO` como secret ou passe `--para`. O endereço não fica versionado aqui porque o
+repositório é público. Veja `.env.example`.
 
 Os secrets são injetados na VM no início de cada execução, então passam a valer a partir
 da execução seguinte ao cadastro. Para conferir se chegaram:
