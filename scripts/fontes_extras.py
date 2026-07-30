@@ -60,13 +60,19 @@ VUNESP_BUSCA = "https://www.vunesp.com.br/busca/concurso/inscricoes%20abertas"
 
 INSTITUTO_DOM = "https://www.institutodom.com/"
 # Bancas que atendem os municípios do raio mas não podem ser raspadas: 403 no caso do
-# IBAM e da CONSESP, lista montada por JavaScript no caso do Avalia e da Valespe.
+# IBAM, da CONSESP e da RBO, lista montada por JavaScript no caso do Avalia e da Valespe.
 BANCAS_MANUAIS = {
     "IBAM (Ilha Solteira)": "https://www.ibamsp-concursos.org.br/",
     "Instituto Avalia (Três Lagoas)": "https://www.avalia.org.br/concursos/inscricoes-abertas",
     "CONSESP (Santa Fé do Sul)": "https://www.consesp.com.br/",
     "Valespe (Castilho)": "https://www.valespe.com.br/",
     "FCC (certames estaduais de SP)": "https://www.concursosfcc.com.br/",
+    # O SEBRAE-SP contrata pela RBO em fluxo quase semanal, um edital por vaga, e
+    # distribui as vagas por Escritório Regional — o ALI Rural 2026 teve polos em
+    # Andradina, Araçatuba e Penápolis. Cada edital fica aberto ~6 dias, então a
+    # listagem precisa ser lida inteira, e não só as manchetes dos portais.
+    "RBO / SEBRAE-SP (vagas em Escritórios Regionais, prazo de ~6 dias)": "https://rboconcursos.selecao.net.br/",
+    "SEBRAE-SP Trabalhe Conosco": "https://sebrae.com.br/sites/PortalSebrae/ufs/sp/trabalhe_conosco",
 }
 
 UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126.0 Safari/537.36"
