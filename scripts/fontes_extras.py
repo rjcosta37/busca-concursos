@@ -19,8 +19,9 @@ aberta e já indexados. Este módulo cobre o que falta:
   grandes, e sim institutos pequenos: o Instituto DOM (Andradina), o IBAM (Ilha
   Solteira), o Instituto Avalia (Três Lagoas), a CONSESP (Santa Fé do Sul) e a
   Valespe (Castilho). Vigiar a banca pega o edital no dia da publicação, antes de
-  qualquer portal indexar. Só o Instituto DOM entrega HTML raspável; os outros
-  respondem 403 ou montam a lista por JavaScript e ficam na conferência manual.
+  qualquer portal indexar. O Instituto DOM e o Instituto Avalia entregam HTML
+  raspável; os outros respondem 403 ou montam a lista por JavaScript e ficam na
+  conferência manual.
 
 Uso:
     python3 scripts/fontes_extras.py            # relatório em Markdown
@@ -59,11 +60,12 @@ FOLHA_EDITORIAS = (
 VUNESP_BUSCA = "https://www.vunesp.com.br/busca/concurso/inscricoes%20abertas"
 
 INSTITUTO_DOM = "https://www.institutodom.com/"
+# `www.avalia.org.br` monta a lista por JavaScript, mas o `www2` serve o HTML pronto.
+AVALIA = "https://www2.avalia.org.br/concursos.jsp"
 # Bancas que atendem os municípios do raio mas não podem ser raspadas: 403 no caso do
-# IBAM, da CONSESP e da RBO, lista montada por JavaScript no caso do Avalia e da Valespe.
+# IBAM, da CONSESP e da RBO, lista montada por JavaScript no caso da Valespe.
 BANCAS_MANUAIS = {
     "IBAM (Ilha Solteira)": "https://www.ibamsp-concursos.org.br/",
-    "Instituto Avalia (Três Lagoas)": "https://www.avalia.org.br/concursos/inscricoes-abertas",
     "CONSESP (Santa Fé do Sul)": "https://www.consesp.com.br/",
     "Valespe (Castilho)": "https://www.valespe.com.br/",
     "FCC (certames estaduais de SP)": "https://www.concursosfcc.com.br/",
@@ -255,6 +257,57 @@ def instituto_dom() -> list[dict]:
     return certames
 
 
+CARTAO_AVALIA = re.compile(
+    r'isotope-item[^>]*data-filter="(?P<situacao>[^"]+)"'
+    r'.*?concurso\.jsp\?id=(?P<id>\d+)[^>]*>(?P<orgao>.*?)</a>'
+    r'.*?<p[^>]*>(?P<andamento>.*?)</p>',
+    re.S | re.I,
+)
+# Rótulos que o filtro da própria página usa; "novos" são os certames já cadastrados mas
+# ainda sem inscrição, que é justamente o estado em que um edital novo aparece primeiro.
+SITUACOES_AVALIA = {
+    "novos": "próximos",
+    "inscricao": "inscrição aberta",
+    "andamento": "em andamento",
+    "resultado": "com resultado",
+    "finalizado": "finalizado",
+}
+
+
+def instituto_avalia() -> list[dict]:
+    """Lê a listagem do Instituto Avalia, banca de Três Lagoas e do Detran-SP.
+
+    A banca entrou no radar por atender Três Lagoas, mas ganhou peso em 22/07/2026, ao
+    ser contratada para o concurso do Detran-SP (145 vagas de Agente Estadual de
+    Trânsito, superior em qualquer área, com CIRETRAN em Ilha Solteira). Cada certame é
+    um `isotope-item` cujo `data-filter` já traz a situação, então não precisamos
+    interpretar o texto para saber se a inscrição está aberta.
+    """
+    try:
+        pagina = baixar(AVALIA, decodificar="iso-8859-1")
+    except (urllib.error.URLError, TimeoutError) as exc:
+        print(f"[aviso] instituto avalia: {exc}", file=sys.stderr)
+        return []
+
+    certames, vistos = [], set()
+    for m in CARTAO_AVALIA.finditer(pagina):
+        orgao = sem_tags(m.group("orgao"))
+        if not orgao or m.group("id") in vistos:
+            continue
+        vistos.add(m.group("id"))
+        situacao = m.group("situacao").strip()
+        certames.append(
+            {
+                "orgao": orgao,
+                "situacao": SITUACOES_AVALIA.get(situacao, situacao),
+                "andamento": sem_tags(m.group("andamento")),
+                "link": f"https://www2.avalia.org.br/concurso.jsp?id={m.group('id')}",
+                "aberto": situacao == "inscricao",
+            }
+        )
+    return certames
+
+
 def varrer(fontes: set[str]) -> dict:
     resultado = {}
     if "sp" in fontes:
@@ -267,6 +320,7 @@ def varrer(fontes: set[str]) -> dict:
         resultado["vunesp"] = VUNESP_BUSCA
     if "bancas" in fontes:
         resultado["instituto_dom"] = instituto_dom()
+        resultado["instituto_avalia"] = instituto_avalia()
         resultado["bancas_manuais"] = BANCAS_MANUAIS
     return resultado
 
@@ -329,6 +383,20 @@ def formatar(resultado: dict) -> str:
                 f"- [{selo}] {c['tipo']} {c['edital']} — {c['titulo']} "
                 f"(inscrições {c['inscricoes']})"
             )
+        linhas.append("")
+
+    if "instituto_avalia" in resultado:
+        certames = resultado["instituto_avalia"]
+        abertos = [c for c in certames if c["aberto"]]
+        linhas += [
+            "## Instituto Avalia (banca de Três Lagoas e do Detran-SP)",
+            "",
+            f"{len(abertos)} com inscrição aberta, de {len(certames)} listados.",
+            "",
+        ]
+        for c in certames:
+            selo = "**ABERTO**" if c["aberto"] else c["situacao"]
+            linhas.append(f"- [{selo}] {c['orgao']} — {c['andamento']}\n  {c['link']}")
         linhas.append("")
 
     if "bancas_manuais" in resultado:
