@@ -15,6 +15,10 @@ aberta e já indexados. Este módulo cobre o que falta:
 - **VUNESP** — a banca de boa parte dos certames paulistas. O site responde 403 a
   qualquer requisição fora do navegador, então aqui só devolvemos a URL para
   conferência via busca web.
+- **Centro Paula Souza (CEETEPS)** — tem Etec em Ilha Solteira, Andradina, Jales e
+  Santa Fé do Sul, e os editais docentes saem por unidade, um por componente
+  curricular. O componente de Sociologia aceita nominalmente "Ciências Sociais",
+  então esta é a única fonte em que formação e cidade se encontram.
 - **Bancas regionais** — quem publica os editais de dentro do raio não são as bancas
   grandes, e sim institutos pequenos: o Instituto DOM (Andradina), o IBAM (Ilha
   Solteira), o Instituto Avalia (Três Lagoas), a CONSESP (Santa Fé do Sul) e a
@@ -35,12 +39,15 @@ import argparse
 import html
 import json
 import re
+import ssl
 import sys
+import unicodedata
 import urllib.error
 import urllib.request
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
+PERFIL = RAIZ / "config" / "perfil.json"
 
 SP_PORTAL = "http://www.concursopublico.sp.gov.br/PortalConcurso/noauth/PortalDeConcursos.do"
 SP_SECOES = {
@@ -58,6 +65,17 @@ FOLHA_EDITORIAS = (
     "concursos-mato-grosso-do-sul-ms",
 )
 VUNESP_BUSCA = "https://www.vunesp.com.br/busca/concurso/inscricoes%20abertas"
+
+# O caminho é `/dgsdad/`. Com `/DeptRH/` as quatro URLs respondem 200 com uma página
+# vazia, o que parece "nada aberto" em vez de erro.
+CPS_BASE = "https://urhsistemas.cps.sp.gov.br/dgsdad/SelecaoPublica"
+CPS_LISTAS = {
+    "PSS docente de Etec": f"{CPS_BASE}/ETEC/PSS/Abertos.aspx",
+    "Concurso público docente de Etec": f"{CPS_BASE}/ETEC/CPD/Abertos.aspx",
+    "PSS de auxiliar de docente": f"{CPS_BASE}/PSSAD/Abertos.aspx",
+    "PSS docente de Fatec": f"{CPS_BASE}/FATEC/PSS/inscricoesabertas.aspx",
+}
+CPS_VAZIO = "NÃO HÁ SELEÇÃO PÚBLICA COM INSCRIÇÕES ABERTAS"
 
 INSTITUTO_DOM = "https://www.institutodom.com/"
 # `www.avalia.org.br` monta a lista por JavaScript, mas o `www2` serve o HTML pronto.
@@ -103,9 +121,40 @@ def baixar_adaptativo(url: str) -> str:
         return bruto.decode("iso-8859-1")
 
 
+def baixar_sem_verificar_tls(url: str) -> str:
+    """Baixa ignorando a cadeia de certificados, equivalente ao `curl -k`.
+
+    O `urhsistemas.cps.sp.gov.br` serve uma cadeia TLS incompleta e falha na validação
+    padrão. É o mesmo servidor onde o Centro Paula Souza publica os editais, então não
+    há alternativa a não ser dispensar a verificação.
+    """
+    contexto = ssl.create_default_context()
+    contexto.check_hostname = False
+    contexto.verify_mode = ssl.CERT_NONE
+    req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "*/*"})
+    with urllib.request.urlopen(req, timeout=TIMEOUT, context=contexto) as resp:
+        return resp.read().decode("utf-8", errors="replace")
+
+
 def sem_tags(fragmento: str) -> str:
     texto = html.unescape(re.sub(r"<[^>]+>", " ", fragmento))
     return re.sub(r"\s+", " ", texto).strip()
+
+
+def normalizar(texto: str) -> str:
+    """Reduz a forma comparável: sem acento, sem caixa, sem espaço sobrando."""
+    sem_acento = unicodedata.normalize("NFKD", texto)
+    sem_acento = "".join(c for c in sem_acento if not unicodedata.combining(c))
+    return re.sub(r"\s+", " ", sem_acento).strip().lower()
+
+
+def municipios_do_raio() -> set[str]:
+    try:
+        perfil = json.loads(PERFIL.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        print(f"[aviso] perfil.json: {exc}", file=sys.stderr)
+        return set()
+    return {normalizar(m["cidade"]) for m in perfil.get("municipios", [])}
 
 
 DATA_JAVA = re.compile(r"^\w{3} \w{3} \d{2} \d{2}:\d{2}:\d{2} \w+ \d{4}$")
@@ -206,6 +255,47 @@ def folha_dirigida() -> dict[str, list[dict]]:
             vistos.add(caminho)
             materias.append({"titulo": titulo, "link": f"https://folha.qconcursos.com{caminho}"})
         resultado[editoria] = materias
+    return resultado
+
+
+def centro_paula_souza() -> dict[str, dict]:
+    """Lê as quatro listagens de seleção pública do Centro Paula Souza.
+
+    O CEETEPS tem 3.145 vagas autorizadas, das quais 1.657 de Professor de Ensino Médio
+    e Técnico, e mantém Etec em Ilha Solteira, Andradina, Jales e Santa Fé do Sul. Como
+    os editais saem descentralizados — um por unidade e por componente curricular —
+    não há um edital único para acompanhar: o jeito é ler a listagem todo dia e filtrar
+    pela coluna CIDADE.
+
+    As quatro páginas são tabelas HTML. Extraímos `<tr>` e, dentro deles, `<td>/<th>`;
+    achatar a página inteira em texto não funciona, porque o CSS inline vem antes do
+    conteúdo e domina o resultado.
+    """
+    raio = municipios_do_raio()
+    resultado = {}
+    for rotulo, url in CPS_LISTAS.items():
+        try:
+            pagina = baixar_sem_verificar_tls(url)
+        except (urllib.error.URLError, TimeoutError, ssl.SSLError) as exc:
+            print(f"[aviso] centro paula souza / {rotulo}: {exc}", file=sys.stderr)
+            resultado[rotulo] = {"linhas": [], "no_raio": [], "erro": str(exc)}
+            continue
+
+        linhas = []
+        for tr in re.findall(r"<tr.*?</tr>", pagina, flags=re.S | re.I):
+            celulas = [
+                sem_tags(c) for c in re.findall(r"<t[dh].*?</t[dh]>", tr, flags=re.S | re.I)
+            ]
+            celulas = [c for c in celulas if c and c != "INSCREVA-SE"]
+            # O cabeçalho se repete no corpo, e a linha única de aviso é o "nada aberto".
+            if not celulas or CPS_VAZIO in " ".join(celulas).upper():
+                continue
+            if any(normalizar(c).startswith("cod da unidade") for c in celulas):
+                continue
+            linhas.append(celulas)
+
+        no_raio = [c for c in linhas if any(normalizar(campo) in raio for campo in c)]
+        resultado[rotulo] = {"linhas": linhas, "no_raio": no_raio}
     return resultado
 
 
@@ -318,6 +408,8 @@ def varrer(fontes: set[str]) -> dict:
         resultado["folha"] = folha_dirigida()
     if "vunesp" in fontes:
         resultado["vunesp"] = VUNESP_BUSCA
+    if "cps" in fontes:
+        resultado["centro_paula_souza"] = centro_paula_souza()
     if "bancas" in fontes:
         resultado["instituto_dom"] = instituto_dom()
         resultado["instituto_avalia"] = instituto_avalia()
@@ -367,6 +459,35 @@ def formatar(resultado: dict) -> str:
             f"{resultado['vunesp']}",
             "",
         ]
+
+    if "centro_paula_souza" in resultado:
+        linhas += [
+            "## Centro Paula Souza (Etec e Fatec)",
+            "",
+            "Etec em Ilha Solteira, Andradina, Jales e Santa Fé do Sul. O componente "
+            "**1029 – Sociologia** aceita \"Ciências Sociais (LP)\"; o **1990 – Filosofia** "
+            "aceita \"Ciências Sociais com Habilitação em Filosofia (LP)\". Confirmar a "
+            "titulação exigida na página de detalhe de cada edital.",
+            "",
+        ]
+        for rotulo, dados in resultado["centro_paula_souza"].items():
+            if dados.get("erro"):
+                linhas += [f"### {rotulo}", "", f"Falhou: {dados['erro']}", ""]
+                continue
+            no_raio, todas = dados["no_raio"], dados["linhas"]
+            linhas += [f"### {rotulo} ({len(todas)} aberto(s))", ""]
+            if no_raio:
+                linhas.append(f"**{len(no_raio)} DENTRO DO RAIO:**")
+                for celulas in no_raio:
+                    linhas.append("- " + " | ".join(celulas))
+                linhas.append("")
+            elif todas:
+                linhas += ["Nada dentro do raio. Abertos no estado:", ""]
+                for celulas in todas:
+                    linhas.append("- " + " | ".join(celulas))
+                linhas.append("")
+            else:
+                linhas += ["Nada aberto.", ""]
 
     if "instituto_dom" in resultado:
         certames = resultado["instituto_dom"]
@@ -419,12 +540,13 @@ def main() -> int:
     parser.add_argument(
         "--fonte",
         action="append",
-        choices=["sp", "cebraspe", "folha", "vunesp", "bancas"],
+        choices=["sp", "cebraspe", "folha", "vunesp", "cps", "bancas"],
         help="limita a varredura (pode repetir)",
     )
     args = parser.parse_args()
 
-    fontes = set(args.fonte) if args.fonte else {"sp", "cebraspe", "folha", "vunesp", "bancas"}
+    todas = {"sp", "cebraspe", "folha", "vunesp", "cps", "bancas"}
+    fontes = set(args.fonte) if args.fonte else todas
     resultado = varrer(fontes)
 
     if args.json:
