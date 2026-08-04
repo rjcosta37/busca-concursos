@@ -42,7 +42,9 @@ import re
 import ssl
 import sys
 import unicodedata
+import datetime
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -76,6 +78,31 @@ CPS_LISTAS = {
     "PSS docente de Fatec": f"{CPS_BASE}/FATEC/PSS/inscricoesabertas.aspx",
 }
 CPS_VAZIO = "NÃO HÁ SELEÇÃO PÚBLICA COM INSCRIÇÕES ABERTAS"
+
+# Repositório de documentos (AEM DAM) onde o SEBRAE-SP publica os comunicados oficiais
+# de processo seletivo. O `.1.json` de qualquer pasta lista os filhos, o que torna a
+# série de comunicados do ano enumerável sem depender da página "Trabalhe Conosco"
+# (montada por JavaScript) nem dos portais de notícia.
+SEBRAE_DAM = (
+    "https://sebrae.com.br/content/dam/portal-sebrae/sp/midias/documentos/pdfs"
+    "/trabalhe-conosco/efetivas"
+)
+# A listagem da banca não traz o requisito de formação, e é ele que decide a
+# elegibilidade. Estes termos servem só para ordenar a leitura: o requisito real está no
+# Anexo I do comunicado, que precisa ser aberto.
+SEBRAE_TERMOS = (
+    "marketing",
+    "comunicacao",
+    "publicidade",
+    "institucional",
+    "educacao",
+    "cultura empreendedora",
+    "atendimento",
+    "negocios",
+    "projetos",
+    "ouvidoria",
+    "psicossoc",
+)
 
 INSTITUTO_DOM = "https://www.institutodom.com/"
 # `www.avalia.org.br` monta a lista por JavaScript, mas o `www2` serve o HTML pronto.
@@ -299,6 +326,82 @@ def centro_paula_souza() -> dict[str, dict]:
     return resultado
 
 
+NUMERO_COMUNICADO = re.compile(r"^(\d{3})[-_]")
+
+
+def _dam_filhos(caminho: str) -> dict[str, dict]:
+    """Lista os filhos de uma pasta do DAM do SEBRAE via `.1.json`.
+
+    O caminho pode ter acento e espaço (as pastas do SEBRAE têm), então precisa ser
+    escapado antes de virar URL — mas sem escapar as barras.
+    """
+    url = urllib.parse.quote(caminho, safe=":/") + ".1.json"
+    dados = json.loads(baixar(url))
+    return {
+        nome: valor
+        for nome, valor in dados.items()
+        if isinstance(valor, dict) and not nome.startswith(("jcr:", "sling:"))
+    }
+
+
+def sebrae_sp(ano: int | None = None, limite: int = 8) -> list[dict]:
+    """Enumera os comunicados de processo seletivo do SEBRAE-SP do ano.
+
+    O SEBRAE-SP é o trilho de maior frequência do radar — cerca de um edital por semana,
+    CLT, e as vagas saem por Escritório Regional (um deles é Andradina). O gargalo nunca
+    foi achar o edital, e sim descobrir o requisito de formação antes de o prazo de ~5
+    dias fechar: nem a listagem da RBO nem os portais de notícia trazem esse dado.
+
+    Cada comunicado vive numa pasta própria do DAM, cujo nome já revela o número, o cargo
+    e a unidade, e contém um único PDF. Devolvemos o link direto desse PDF — é no
+    **Anexo I – Requisitos Exigidos e Desejáveis** que está a resposta, e ele precisa ser
+    lido (o comunicado 030/2026, por exemplo, exigia Administração/Contábeis/Economia,
+    o que exclui Ciências Sociais).
+    """
+    if ano is None:
+        ano = datetime.date.today().year
+    raio = municipios_do_raio()
+    try:
+        pastas = _dam_filhos(f"{SEBRAE_DAM}/{ano}")
+    except (urllib.error.URLError, TimeoutError, ValueError) as exc:
+        print(f"[aviso] sebrae-sp: {exc}", file=sys.stderr)
+        return []
+
+    comunicados = []
+    for nome, meta in pastas.items():
+        achado = NUMERO_COMUNICADO.match(nome)
+        if not achado:  # descarta a pasta "manuais" e PDFs soltos de aviso
+            continue
+        rotulo = normalizar(nome.replace("-", " "))
+        try:
+            arquivos = [
+                f
+                for f in _dam_filhos(f"{SEBRAE_DAM}/{ano}/{nome}")
+                if f.lower().endswith(".pdf")
+            ]
+        except (urllib.error.URLError, TimeoutError, ValueError):
+            arquivos = []
+        # A pasta acumula os PDFs de todas as fases (relação de inscritos, habilitados,
+        # cronograma retificado). Só o comunicado traz o Anexo I com os requisitos.
+        comunicado = [a for a in arquivos if "comunicado" in normalizar(a)]
+        arquivos = comunicado or arquivos
+        comunicados.append(
+            {
+                "numero": achado.group(1),
+                "pasta": nome,
+                "criado": meta.get("jcr:created", ""),
+                "no_raio": [m for m in raio if m in rotulo],
+                "termos": [t for t in SEBRAE_TERMOS if t in rotulo],
+                "comunicados": [
+                    urllib.parse.quote(f"{SEBRAE_DAM}/{ano}/{nome}/{a}", safe=":/")
+                    for a in arquivos
+                ],
+            }
+        )
+    comunicados.sort(key=lambda c: c["numero"], reverse=True)
+    return comunicados[:limite]
+
+
 CARTAO_DOM = re.compile(
     r"(?P<tipo>Concurso Público|Processo Seletivo)\s*-\s*(?P<titulo>.*?)\s*"
     r"Edital n[º°]?\s*(?P<edital>[\w./-]+)\s+"
@@ -410,6 +513,8 @@ def varrer(fontes: set[str]) -> dict:
         resultado["vunesp"] = VUNESP_BUSCA
     if "cps" in fontes:
         resultado["centro_paula_souza"] = centro_paula_souza()
+    if "sebrae" in fontes:
+        resultado["sebrae_sp"] = sebrae_sp()
     if "bancas" in fontes:
         resultado["instituto_dom"] = instituto_dom()
         resultado["instituto_avalia"] = instituto_avalia()
@@ -459,6 +564,31 @@ def formatar(resultado: dict) -> str:
             f"{resultado['vunesp']}",
             "",
         ]
+
+    if "sebrae_sp" in resultado:
+        comunicados = resultado["sebrae_sp"]
+        linhas += [
+            "## SEBRAE-SP — comunicados oficiais (repositório do próprio órgão)",
+            "",
+            "Um edital por vaga, em ritmo quase semanal, e cada um fica aberto ~5 dias. "
+            "A listagem da banca não diz qual formação é exigida: **abrir o PDF do "
+            "comunicado e ler o Anexo I – Requisitos Exigidos** antes de decidir. "
+            "As vagas saem por Escritório Regional, e um deles é Andradina.",
+            "",
+        ]
+        if not comunicados:
+            linhas += ["Não foi possível ler o repositório.", ""]
+        for c in comunicados:
+            marca = " **← DENTRO DO RAIO**" if c["no_raio"] else ""
+            if c["termos"]:
+                marca += f" (termos: {', '.join(c['termos'])})"
+            # A data de criação da pasta é o sinal de "novo desde a última execução" —
+            # mais confiável que a listagem da banca, que não datava nada.
+            criado = f" · publicado em {c['criado'][:16]}" if c["criado"] else ""
+            linhas.append(f"- **{c['numero']}** — {c['pasta']}{criado}{marca}")
+            for link in c["comunicados"]:
+                linhas.append(f"  {link}")
+        linhas.append("")
 
     if "centro_paula_souza" in resultado:
         linhas += [
@@ -540,12 +670,12 @@ def main() -> int:
     parser.add_argument(
         "--fonte",
         action="append",
-        choices=["sp", "cebraspe", "folha", "vunesp", "cps", "bancas"],
+        choices=["sp", "cebraspe", "folha", "vunesp", "cps", "sebrae", "bancas"],
         help="limita a varredura (pode repetir)",
     )
     args = parser.parse_args()
 
-    todas = {"sp", "cebraspe", "folha", "vunesp", "cps", "bancas"}
+    todas = {"sp", "cebraspe", "folha", "vunesp", "cps", "sebrae", "bancas"}
     fontes = set(args.fonte) if args.fonte else todas
     resultado = varrer(fontes)
 

@@ -13,7 +13,7 @@ config/perfil.json           perfil do candidato, municípios do raio e regras d
 scripts/pci.py               cliente do servidor MCP público da PCI Concursos
 scripts/buscar_concursos.py  varre por município e por cargo, e monta o rascunho do relatório
 scripts/diarios.py           busca atos de concurso nos diários oficiais
-scripts/fontes_extras.py     consulta portais e bancas (portal SP, Cebraspe, Folha Dirigida, bancas regionais)
+scripts/fontes_extras.py     consulta portais e bancas (portal SP, Cebraspe, Folha Dirigida, Centro Paula Souza, SEBRAE-SP, bancas regionais)
 scripts/enviar_email.py      envia um relatório por SMTP
 scripts/rodar_diario.py      rotina completa: varre, grava e envia
 relatorios/AAAA-MM-DD.md     relatório de cada dia (é também o corpo do e-mail)
@@ -107,6 +107,7 @@ sumário do diário. Por isso os dois grupos vão no relatório, com link para o
 | **Folha Dirigida** (Qconcursos) | HTML renderizado no servidor | editorias de concursos abertos, previstos, SP e MS |
 | **VUNESP** | — | manual: o site responde 403 a qualquer requisição fora do navegador |
 | **Instituto DOM** | HTML na página inicial, lido por regex | certames da banca de Andradina, com o selo de inscrição aberta |
+| **SEBRAE-SP** | listagem `.1.json` do repositório de documentos do próprio órgão | a série de comunicados do ano, com data de publicação e link do PDF que traz o Anexo I |
 | **Bancas regionais** | — | manual: IBAM, Instituto Avalia, CONSESP, Valespe e FCC |
 
 O portal do Estado de SP é o mais valioso dos quatro: é a fonte oficial e a única
@@ -116,6 +117,14 @@ vigentes no momento, não o histórico, então vale conferir todo dia.
 
 A página da VUNESP entra no relatório como um link para conferência, porque o site
 bloqueia `curl` e `urllib` — inclusive na raiz. Ele funciona por busca web.
+
+O SEBRAE-SP é o trilho de maior frequência (um edital por vaga, em ritmo quase semanal, e
+cada um aberto por só ~5 dias), mas o gargalo nunca foi achar o edital: era descobrir a
+formação exigida antes do prazo fechar, porque nem a listagem da banca nem os portais de
+notícia trazem esse dado. O script resolve a primeira metade — enumera os comunicados do
+ano e devolve o link direto do PDF. A segunda metade continua manual e é obrigatória:
+**abrir o comunicado e ler o Anexo I – Requisitos Exigidos e Desejáveis**, que é onde a
+elegibilidade se decide.
 
 #### Por que vigiar bancas pequenas
 
