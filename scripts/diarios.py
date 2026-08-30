@@ -42,7 +42,10 @@ DOU_PAYLOAD = re.compile(
     r'id="_br_com_seatecnologia_in_buscadou_BuscaDouPortlet_params"[^>]*>(.*?)</script>',
     re.S,
 )
-QD_API = "https://api.queridodiario.ok.org.br/api"
+QD_APIS = (
+    "https://api.queridodiario.ok.org.br/api",
+    "https://queridodiario.ok.org.br/api",
+)
 UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126.0 Safari/537.36"
 TIMEOUT = 60
 
@@ -116,10 +119,45 @@ def limpar(texto: str) -> str:
     return re.sub(r"\s+", " ", TAGS_HTML.sub("", texto or "")).strip()
 
 
+# O in.gov.br devolve 403 intermitente quando a requisição tem poucos
+# cabeçalhos (visto em 30/08/2026 sob rajada de consultas; na repetição os dois
+# conjuntos passaram). Mandar o conjunto completo reduz a chance do 403 sem
+# mudar o resultado quando a fonte está saudável.
+CABECALHOS = {
+    "User-Agent": UA,
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
+    "Referer": "https://www.in.gov.br/consulta/-/buscar/dou",
+    "Upgrade-Insecure-Requests": "1",
+}
+
+
 def _get(url: str) -> str:
-    req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "*/*"})
+    req = urllib.request.Request(url, headers=CABECALHOS)
     with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
         return resp.read().decode("utf-8", errors="ignore")
+
+
+def _qd_gazettes(params: str, cidade: str) -> dict | None:
+    """Consulta o Querido Diário tentando os hosts conhecidos, na ordem.
+
+    Em 30/08/2026 o host histórico (`api.queridodiario...`) passou a responder
+    404 em todas as rotas e o domínio do site devolve o HTML da SPA. Percorrer a
+    lista deixa a função voltar a funcionar sozinha quando a API reabrir, em vez
+    de exigir uma nova edição do script.
+    """
+    ultimo_erro: Exception | None = None
+    for base in QD_APIS:
+        try:
+            return json.loads(_get(f"{base}/gazettes?{params}"))
+        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+            ultimo_erro = exc
+    print(
+        f"[aviso] Querido Diário {cidade}: nenhum host respondeu JSON "
+        f"({ultimo_erro}) — diários municipais NÃO conferidos",
+        file=sys.stderr,
+    )
+    return None
 
 
 def classificar_ato(titulo: str, *trechos: str) -> str | None:
@@ -224,10 +262,8 @@ def buscar_diarios_municipais(territorios: list[dict], dias: int = 7) -> list[di
                 "sort_by": "descending_date",
             }
         )
-        try:
-            dados = json.loads(_get(f"{QD_API}/gazettes?{params}"))
-        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
-            print(f"[aviso] Querido Diário {t['cidade']}: {exc}", file=sys.stderr)
+        dados = _qd_gazettes(params, t["cidade"])
+        if dados is None:
             continue
 
         for g in dados.get("gazettes", []):
