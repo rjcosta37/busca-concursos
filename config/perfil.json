@@ -1,0 +1,518 @@
+{
+  "candidato": {
+    "escolaridade": "superior",
+    "formacao": "Ciências Sociais (Sociologia, Antropologia e Ciência Política)",
+    "pos_graduacao": "Publicidade",
+    "aceita_qualquer_cargo_superior": true
+  },
+  "origem": {
+    "cidade": "Ilha Solteira",
+    "uf": "SP",
+    "lat": -20.4297,
+    "lon": -51.3428,
+    "raio_km": 110
+  },
+  "municipios": [
+    {
+      "cidade": "Selvíria",
+      "uf": "MS",
+      "km": 15,
+      "territory_id": "5007802",
+      "qd_nivel": 0,
+      "dou": true
+    },
+    {
+      "cidade": "Itapura",
+      "uf": "SP",
+      "km": 20,
+      "territory_id": "3523008",
+      "qd_nivel": 0,
+      "dou": false
+    },
+    {
+      "cidade": "Ilha Solteira",
+      "uf": "SP",
+      "km": 0,
+      "territory_id": "3520442",
+      "qd_nivel": 0,
+      "dou": true
+    },
+    {
+      "cidade": "Suzanápolis",
+      "uf": "SP",
+      "km": 35,
+      "territory_id": "3552551",
+      "qd_nivel": 0,
+      "dou": false
+    },
+    {
+      "cidade": "Pereira Barreto",
+      "uf": "SP",
+      "km": 35,
+      "territory_id": "3537404",
+      "qd_nivel": 0,
+      "dou": true
+    },
+    {
+      "cidade": "Aparecida do Taboado",
+      "uf": "MS",
+      "km": 55,
+      "territory_id": "5001003",
+      "qd_nivel": 0,
+      "dou": true
+    },
+    {
+      "cidade": "Sud Mennucci",
+      "uf": "SP",
+      "km": 55,
+      "territory_id": "3552304",
+      "qd_nivel": 0,
+      "dou": false
+    },
+    {
+      "cidade": "Castilho",
+      "uf": "SP",
+      "km": 60,
+      "territory_id": "3511003",
+      "qd_nivel": 1,
+      "dou": true
+    },
+    {
+      "cidade": "Andradina",
+      "uf": "SP",
+      "km": 65,
+      "territory_id": "3502101",
+      "qd_nivel": 3,
+      "dou": true
+    },
+    {
+      "cidade": "Santa Fé do Sul",
+      "uf": "SP",
+      "km": 70,
+      "territory_id": "3546603",
+      "qd_nivel": 0,
+      "dou": true
+    },
+    {
+      "cidade": "Murutinga do Sul",
+      "uf": "SP",
+      "km": 70,
+      "territory_id": "3532108",
+      "qd_nivel": 0,
+      "dou": false
+    },
+    {
+      "cidade": "Nova Independência",
+      "uf": "SP",
+      "km": 75,
+      "territory_id": "3533205",
+      "qd_nivel": 0,
+      "dou": false
+    },
+    {
+      "cidade": "Guzolândia",
+      "uf": "SP",
+      "km": 75,
+      "territory_id": "3518909",
+      "qd_nivel": 0,
+      "dou": false
+    },
+    {
+      "cidade": "Guaraçaí",
+      "uf": "SP",
+      "km": 85,
+      "territory_id": "3517802",
+      "qd_nivel": 3,
+      "dou": false
+    },
+    {
+      "cidade": "Auriflama",
+      "uf": "SP",
+      "km": 85,
+      "territory_id": "3504206",
+      "qd_nivel": 0,
+      "dou": false
+    },
+    {
+      "cidade": "Rubinéia",
+      "uf": "SP",
+      "km": 85,
+      "territory_id": "3544509",
+      "qd_nivel": 0,
+      "dou": false
+    },
+    {
+      "cidade": "Paranaíba",
+      "uf": "MS",
+      "km": 85,
+      "territory_id": "5006309",
+      "qd_nivel": 0,
+      "dou": true
+    },
+    {
+      "cidade": "Três Lagoas",
+      "uf": "MS",
+      "km": 90,
+      "territory_id": "5008305",
+      "qd_nivel": 1,
+      "dou": true
+    },
+    {
+      "cidade": "Lavínia",
+      "uf": "SP",
+      "km": 90,
+      "territory_id": "3526506",
+      "qd_nivel": 3,
+      "dou": false
+    },
+    {
+      "cidade": "Três Fronteiras",
+      "uf": "SP",
+      "km": 90,
+      "territory_id": "3554904",
+      "qd_nivel": 0,
+      "dou": false
+    },
+    {
+      "cidade": "Jales",
+      "uf": "SP",
+      "km": 90,
+      "territory_id": "3524808",
+      "qd_nivel": 0,
+      "dou": true
+    },
+    {
+      "cidade": "Mirandópolis",
+      "uf": "SP",
+      "km": 95,
+      "territory_id": "3530102",
+      "qd_nivel": 0,
+      "dou": true
+    },
+    {
+      "cidade": "Urânia",
+      "uf": "SP",
+      "km": 95,
+      "territory_id": "3555802",
+      "qd_nivel": 0,
+      "dou": false
+    },
+    {
+      "cidade": "Palmeira D'Oeste",
+      "uf": "SP",
+      "km": 95,
+      "territory_id": "3535200",
+      "qd_nivel": 0,
+      "dou": false
+    },
+    {
+      "cidade": "Marinópolis",
+      "uf": "SP",
+      "km": 95,
+      "territory_id": "3529104",
+      "qd_nivel": 0,
+      "dou": false
+    },
+    {
+      "cidade": "Aparecida D'Oeste",
+      "uf": "SP",
+      "km": 95,
+      "territory_id": "3502606",
+      "qd_nivel": 0,
+      "dou": false
+    },
+    {
+      "cidade": "Santa Rita D'Oeste",
+      "uf": "SP",
+      "km": 95,
+      "territory_id": "3547403",
+      "qd_nivel": 0,
+      "dou": false
+    },
+    {
+      "cidade": "Santa Clara D'Oeste",
+      "uf": "SP",
+      "km": 95,
+      "territory_id": "3546108",
+      "qd_nivel": 0,
+      "dou": false
+    },
+    {
+      "cidade": "Dirce Reis",
+      "uf": "SP",
+      "km": 100,
+      "territory_id": "3513850",
+      "qd_nivel": 3,
+      "dou": false
+    },
+    {
+      "cidade": "Nova Canaã Paulista",
+      "uf": "SP",
+      "km": 100,
+      "territory_id": "3532843",
+      "qd_nivel": 0,
+      "dou": false
+    },
+    {
+      "cidade": "São Francisco",
+      "uf": "SP",
+      "km": 100,
+      "territory_id": "3549003",
+      "qd_nivel": 0,
+      "dou": false
+    },
+    {
+      "cidade": "Populina",
+      "uf": "SP",
+      "km": 105,
+      "territory_id": "3540408",
+      "qd_nivel": 0,
+      "dou": false
+    },
+    {
+      "cidade": "Mesópolis",
+      "uf": "SP",
+      "km": 105,
+      "territory_id": "3529658",
+      "qd_nivel": 0,
+      "dou": false
+    },
+    {
+      "cidade": "Dolcinópolis",
+      "uf": "SP",
+      "km": 105,
+      "territory_id": "3514205",
+      "qd_nivel": 1,
+      "dou": false
+    },
+    {
+      "cidade": "Santa Salete",
+      "uf": "SP",
+      "km": 105,
+      "territory_id": "3547650",
+      "qd_nivel": 0,
+      "dou": false
+    },
+    {
+      "cidade": "Santana da Ponte Pensa",
+      "uf": "SP",
+      "km": 105,
+      "territory_id": "3547205",
+      "qd_nivel": 0,
+      "dou": false
+    },
+    {
+      "cidade": "Paranapuã",
+      "uf": "SP",
+      "km": 105,
+      "territory_id": "3535903",
+      "qd_nivel": 0,
+      "dou": false
+    },
+    {
+      "cidade": "Turmalina",
+      "uf": "SP",
+      "km": 105,
+      "territory_id": "3555307",
+      "qd_nivel": 0,
+      "dou": false
+    },
+    {
+      "cidade": "Valparaíso",
+      "uf": "SP",
+      "km": 110,
+      "territory_id": "3556305",
+      "qd_nivel": 3,
+      "dou": false
+    },
+    {
+      "cidade": "General Salgado",
+      "uf": "SP",
+      "km": 110,
+      "territory_id": "3516903",
+      "qd_nivel": 3,
+      "dou": false
+    },
+    {
+      "cidade": "Estrela D'Oeste",
+      "uf": "SP",
+      "km": 110,
+      "territory_id": "3515202",
+      "qd_nivel": 1,
+      "dou": false
+    },
+    {
+      "cidade": "Fernandópolis",
+      "uf": "SP",
+      "km": 110,
+      "territory_id": "3515509",
+      "qd_nivel": 0,
+      "dou": true
+    },
+    {
+      "cidade": "Inocência",
+      "uf": "MS",
+      "km": 110,
+      "territory_id": "5004403",
+      "qd_nivel": 3,
+      "dou": false
+    }
+  ],
+  "elegibilidade": {
+    "comentario": "O cargo serve se exigir superior em qualquer área ou se casar com Ciências Sociais / Publicidade. Cargos de conselho profissional com diploma específico não servem.",
+    "cargos_alvo": [
+      "qualquer área",
+      "sociologia",
+      "filosofia",
+      "história",
+      "ciências sociais",
+      "ciência política",
+      "antropologia",
+      "publicidade",
+      "propaganda",
+      "comunicação",
+      "marketing",
+      "jornalismo",
+      "analista administrativo",
+      "agente administrativo",
+      "assistente administrativo",
+      "analista de gestão",
+      "gestor público",
+      "administrador",
+      "fiscal",
+      "auditor",
+      "pesquisador",
+      "professor"
+    ],
+    "cargos_excluidos": [
+      "psicólogo",
+      "fonoaudiólogo",
+      "terapeuta ocupacional",
+      "enfermeiro",
+      "médico",
+      "odontólogo",
+      "dentista",
+      "farmacêutico",
+      "nutricionista",
+      "fisioterapeuta",
+      "veterinário",
+      "engenheiro",
+      "arquiteto",
+      "contador",
+      "advogado",
+      "procurador",
+      "assistente social",
+      "biólogo",
+      "químico",
+      "agrônomo"
+    ]
+  },
+  "busca_por_cargo": {
+    "comentario": "A varredura por cidade só enxerga certames que a PCI indexa como municipais, então perde concursos estaduais, federais e de universidades cuja lotação não é um dos 43 municípios. Esta segunda passada busca pelo cargo/formação e reporta os achados à parte, marcados como fora do raio.",
+    "ufs": [
+      "SP",
+      "MS"
+    ],
+    "termos": [
+      "Ciencias Sociais",
+      "Sociologia",
+      "Antropologia",
+      "Ciencia Politica",
+      "Publicidade",
+      "Comunicacao Social",
+      "Jornalismo",
+      "Marketing"
+    ]
+  },
+  "portais_e_bancas": {
+    "comentario": "Automatizados em scripts/fontes_extras.py. O portal do Estado de SP é a única fonte automatizável de concursos AUTORIZADOS em SP, já que o DOE-SP não tem API pública utilizável. O site da VUNESP responde 403 fora do navegador, então só pode ser consultado por busca web.",
+    "portal_sp": {
+      "base": "http://www.concursopublico.sp.gov.br/PortalConcurso/noauth/PortalDeConcursos.do",
+      "acoes": [
+        "concursoInscrAberta",
+        "concursoAutorizado",
+        "proximoConcurso"
+      ],
+      "encoding": "iso-8859-1"
+    },
+    "cebraspe": {
+      "api": "https://apis.cebraspe.org.br/cebraspe/eventos/tipo/concursos",
+      "fases": [
+        "novos",
+        "inscricoes-abertas"
+      ],
+      "site": "https://www.cebraspe.org.br/concursos/"
+    },
+    "folha_dirigida": {
+      "base": "https://folha.qconcursos.com/e",
+      "editorias": [
+        "concursos-abertos",
+        "concursos-previstos",
+        "concursos-sao-paulo-sp",
+        "concursos-mato-grosso-do-sul-ms"
+      ]
+    },
+    "vunesp": {
+      "busca": "https://www.vunesp.com.br/busca/concurso/inscricoes%20abertas",
+      "acesso": "somente por busca web; curl e urllib recebem HTTP 403"
+    },
+    "bancas_regionais": {
+      "comentario": "Quem publica os editais de dentro do raio nao sao as bancas grandes, e sim institutos pequenos. Vigiar a banca pega o edital no dia da publicacao. Só o Instituto DOM entrega HTML rastreavel (e alterna entre UTF-8 e ISO-8859-1 na mesma URL); os demais respondem 403 ou montam a lista por JavaScript.",
+      "raspavel": {
+        "instituto_dom": "https://www.institutodom.com/"
+      },
+      "conferir_a_mao": {
+        "ibam": "https://www.ibamsp-concursos.org.br/",
+        "instituto_avalia": "https://www.avalia.org.br/concursos/inscricoes-abertas",
+        "consesp": "https://www.consesp.com.br/",
+        "valespe": "https://www.valespe.com.br/",
+        "fcc": "https://www.concursosfcc.com.br/"
+      },
+      "quem_atende": {
+        "instituto_dom": "Andradina/SP",
+        "ibam": "Ilha Solteira/SP",
+        "instituto_avalia": "Tres Lagoas/MS",
+        "consesp": "Santa Fe do Sul/SP",
+        "valespe": "Castilho/SP",
+        "fcc": "certames estaduais de SP (Fundacao Florestal, IPA, CETESB)"
+      }
+    }
+  },
+  "fontes_extras": [
+    "https://www.pciconcursos.com.br/concursos/sudeste/",
+    "https://www.pciconcursos.com.br/concursos/centrooeste/",
+    "https://www.pciconcursos.com.br/concursos/nacional/",
+    "http://www.concursopublico.sp.gov.br/PortalConcurso/noauth/PortalDeConcursos.do?acao=concursoAutorizado",
+    "https://folha.qconcursos.com/e/concursos-previstos",
+    "https://www.cebraspe.org.br/concursos/",
+    "https://www.vunesp.com.br/busca/concurso/inscricoes%20abertas",
+    "https://urhsistemas.cps.sp.gov.br/dgsdad/SelecaoPublica/ETEC/PSS/Abertos.aspx",
+    "https://urhsistemas.cps.sp.gov.br/dgsdad/SelecaoPublica/ETEC/CPD/Abertos.aspx",
+    "https://urhsistemas.cps.sp.gov.br/dgsdad/SelecaoPublica/PSSAD/Abertos.aspx",
+    "https://www.concursos.ufms.br/",
+    "https://selecao.ifms.edu.br/",
+    "https://www.andradina.sp.gov.br/",
+    "https://www.treslagoas.ms.gov.br/",
+    "https://www.aparecidadotaboado.ms.gov.br/",
+    "https://www.paranaiba.ms.gov.br/",
+    "https://www.castilho.sp.gov.br/",
+    "https://www.sgim.com.br/selviria/concursos.php?tipo=1",
+    "https://www.institutodom.com/",
+    "https://www.ibamsp-concursos.org.br/",
+    "https://www2.avalia.org.br/concursos.jsp",
+    "https://www.consesp.com.br/",
+    "https://www.concursosfcc.com.br/",
+    "https://rboconcursos.selecao.net.br/",
+    "https://sebrae.com.br/sites/PortalSebrae/ufs/sp/trabalhe_conosco"
+  ],
+  "diarios": {
+    "comentario": "territory_id e qd_nivel vem da API do Querido Diário; qd_nivel 0 significa que o município ainda não é coletado. O flag dou limita quais cidades viram termo de busca no Diário Oficial da União, para não gerar 43 requisições.",
+    "dou": "https://www.in.gov.br/consulta/-/buscar/dou",
+    "querido_diario": "https://api.queridodiario.ok.org.br/api",
+    "sem_api_publica": {
+      "doe_sp": "https://doe.sp.gov.br/busca-avancada",
+      "doe_ms": "https://www.spdo.ms.gov.br/diariodoe/",
+      "assomasul": "https://diariooficialms.com.br/"
+    }
+  }
+}
