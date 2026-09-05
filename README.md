@@ -14,6 +14,7 @@ scripts/pci.py               cliente do servidor MCP público da PCI Concursos
 scripts/buscar_concursos.py  varre por município e por cargo, e monta o rascunho do relatório
 scripts/diarios.py           busca atos de concurso nos diários oficiais
 scripts/fontes_extras.py     consulta portais e bancas (portal SP, Cebraspe, Folha Dirigida, Centro Paula Souza, SEBRAE-SP, bancas regionais)
+scripts/pncp_municipios.py   procura no PNCP contratações de banca de concurso nos municípios do raio
 scripts/enviar_email.py      envia um relatório por SMTP
 scripts/rodar_diario.py      rotina completa: varre, grava e envia
 relatorios/AAAA-MM-DD.md     relatório de cada dia (é também o corpo do e-mail)
@@ -44,6 +45,8 @@ python3 scripts/diarios.py --dias 30           # só os diários, janela de 30 d
 python3 scripts/diarios.py --tudo              # inclui atos de andamento sem corte
 python3 scripts/fontes_extras.py               # só os portais e bancas
 python3 scripts/fontes_extras.py --fonte sp    # limita a uma fonte (pode repetir)
+python3 scripts/pncp_municipios.py             # varre os 43 municípios do raio no PNCP
+python3 scripts/pncp_municipios.py --municipio urania --desde 20260101
 python3 scripts/enviar_email.py relatorios/2026-07-27.md --dry-run
 ```
 
